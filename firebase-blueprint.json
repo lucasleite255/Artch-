@@ -1,0 +1,557 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Catalog product stored in Firestore and displayed across the Artchê storefront and admin dashboard.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique catalog slug/reference identifier."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 140,
+          "description": "Product display name."
+        },
+        "brand": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80,
+          "description": "Manufacturer or Artchê curation label."
+        },
+        "categories": {
+          "type": "array",
+          "description": "Normalized category tags (1 to 8 entries, e.g. /feminino/, /Casacos e Jaquetas/)."
+        },
+        "images": {
+          "type": "array",
+          "description": "Product image paths or URLs (1 to 6 entries)."
+        },
+        "cover": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^(/assets/|/uploads/|https://).+$",
+          "description": "Primary product image URL."
+        },
+        "videoUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000,
+          "description": "Optional product video URL (/uploads/..., /assets/..., or https://...)."
+        },
+        "coverType": {
+          "type": "string",
+          "enum": ["image", "video"],
+          "description": "Media type displayed as the storefront cover."
+        },
+        "featuredOnHome": {
+          "type": "boolean",
+          "description": "Whether the product is highlighted in Nossos destaques on the home page."
+        },
+        "featuredOrder": {
+          "type": "integer",
+          "description": "Explicit ordering position (0 to 1000) within Nossos destaques on the home page."
+        },
+        "variants": {
+          "type": "array",
+          "description": "Available consultation options, colors, or sizes (1 to 12 entries)."
+        },
+        "catalogSource": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Origin identifier for catalog batch or dashboard creation."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active"],
+          "description": "Publication state for storefront visibility."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when product was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when product was last updated."
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the verified admin who created the product."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "brand",
+        "categories",
+        "images",
+        "cover",
+        "variants",
+        "catalogSource",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ]
+    },
+    "RemovedCatalogProduct": {
+      "title": "RemovedCatalogProduct",
+      "description": "Tombstone record for a built-in catalog item removed by an admin.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "ID of the removed built-in catalog item."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140,
+          "description": "Display name at the time of removal."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["removed", "purged"],
+          "description": "Explicit tombstone state: removed shows in trash for restore; purged stays hidden from storefront and trash."
+        },
+        "removedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of removal."
+        },
+        "removedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the verified admin who removed the product."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status",
+        "removedAt",
+        "removedBy"
+      ]
+    },
+    "StoreCategory": {
+      "title": "StoreCategory",
+      "description": "Storefront category highlight configuration and custom categories managed in the admin dashboard.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique category slug identifier."
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "URL slug matching id."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 60,
+          "description": "Display label shown in navigation and Home carousel."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 240,
+          "description": "Short category description shown on the category page."
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64,
+          "description": "Normalized product category tag (e.g. /feminino/, /Neve/)."
+        },
+        "coverImage": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000,
+          "description": "Highlight photo URL (/uploads/..., /assets/..., or https://...); empty uses default image."
+        },
+        "showOnHome": {
+          "type": "boolean",
+          "description": "Whether the category appears in the Home style highlights carousel."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "description": "Display ordering index (0 to 1000)."
+        },
+        "isBuiltIn": {
+          "type": "boolean",
+          "description": "True when overriding a built-in catalog category."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active"],
+          "description": "Visibility status for storefront queries."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when category record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when category record was last updated."
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the verified admin who created the category record."
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "description",
+        "tag",
+        "coverImage",
+        "showOnHome",
+        "sortOrder",
+        "isBuiltIn",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ]
+    },
+    "HeroSlide": {
+      "title": "HeroSlide",
+      "description": "Home page hero campaign slide managed in the admin dashboard.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique hero slide identifier."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Main editorial headline shown on the slide."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 240,
+          "description": "Supporting campaign copy below the headline."
+        },
+        "ctaLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "description": "Action button label."
+        },
+        "ctaPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^(/|https://).*$",
+          "description": "Internal storefront path or HTTPS link opened by the slide CTA button."
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": ["image", "video"],
+          "description": "Media type displayed in the slide visual area."
+        },
+        "imageUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000,
+          "description": "Slide photo or video poster URL (/uploads/..., /assets/..., or https://...)."
+        },
+        "videoUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000,
+          "description": "Slide video URL (/uploads/..., /assets/..., or https://...)."
+        },
+        "visible": {
+          "type": "boolean",
+          "description": "Whether the slide is active in the home carousel."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "description": "Display ordering index (0 to 1000)."
+        },
+        "isBuiltIn": {
+          "type": "boolean",
+          "description": "True when overriding one of the default Artchê campaign slides."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active"],
+          "description": "Publication status for storefront queries."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when slide record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when slide record was last updated."
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the verified admin who created the slide record."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "ctaLabel",
+        "ctaPath",
+        "mediaType",
+        "imageUrl",
+        "videoUrl",
+        "visible",
+        "sortOrder",
+        "isBuiltIn",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ]
+    },
+    "AdminAccount": {
+      "title": "AdminAccount",
+      "description": "Trusted administrator role document keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the administrator."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "description": "Assigned administrative role."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin entry was recorded."
+        }
+      },
+      "required": [
+        "uid",
+        "role",
+        "createdAt"
+      ]
+    },
+    "MediaAsset": {
+      "title": "MediaAsset",
+      "description": "Durable admin-uploaded storefront media (inline base64 for images, chunked manifest for videos) so /uploads/* URLs survive server restarts and deployments.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Normalized document ID matching the uploaded filename."
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 96,
+          "pattern": "^[a-zA-Z0-9_\\-]+\\.(jpg|jpeg|png|webp|avif|mp4|webm|mov)$",
+          "description": "Public filename served under /uploads/<filename>."
+        },
+        "mimeType": {
+          "type": "string",
+          "enum": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/avif",
+            "video/mp4",
+            "video/webm",
+            "video/quicktime"
+          ],
+          "description": "Media MIME type."
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": ["image", "video"],
+          "description": "Whether this asset is a single-doc image or a chunked video."
+        },
+        "dataBase64": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 920000,
+          "description": "Base64-encoded optimized image payload (empty string for chunked videos)."
+        },
+        "chunkCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60,
+          "description": "Number of chunks stored in the chunks subcollection (0 for inline images, 1..60 for videos)."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 26214400,
+          "description": "Decoded byte size of the media file (up to 25 MB for videos)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active"],
+          "description": "Explicit active state for public get reads."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when uploaded."
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the verified admin who uploaded the media."
+        }
+      },
+      "required": [
+        "id",
+        "filename",
+        "mimeType",
+        "dataBase64",
+        "size",
+        "status",
+        "createdAt",
+        "createdBy"
+      ]
+    },
+    "MediaChunk": {
+      "title": "MediaChunk",
+      "description": "Base64 binary chunk belonging to a durable uploaded video in mediaAssets/{mediaId}/chunks/{chunkId}.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Chunk document ID (e.g. c0, c1)."
+        },
+        "mediaId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Parent mediaAsset ID."
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 59,
+          "description": "Zero-based chunk index."
+        },
+        "dataBase64": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 760000,
+          "description": "Base64-encoded binary slice (~512 KB binary)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active"],
+          "description": "Explicit active state."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp."
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the verified admin."
+        }
+      },
+      "required": [
+        "id",
+        "mediaId",
+        "index",
+        "dataBase64",
+        "status",
+        "createdAt",
+        "createdBy"
+      ]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Publicly readable catalog products managed exclusively by verified admins."
+    },
+    "/removedProducts/{productId}": {
+      "schema": { "$ref": "#/entities/RemovedCatalogProduct" },
+      "description": "Publicly readable removal markers for built-in catalog items, managed exclusively by verified admins."
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/StoreCategory" },
+      "description": "Publicly readable storefront categories and Home highlight cover images managed exclusively by verified admins."
+    },
+    "/heroSlides/{slideId}": {
+      "schema": { "$ref": "#/entities/HeroSlide" },
+      "description": "Publicly readable home hero carousel slides managed exclusively by verified admins."
+    },
+    "/mediaAssets/{mediaId}": {
+      "schema": { "$ref": "#/entities/MediaAsset" },
+      "description": "Durable storefront images and chunked video manifests served via /uploads/<filename>."
+    },
+    "/mediaAssets/{mediaId}/chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/MediaChunk" },
+      "description": "Binary slices for durable uploaded videos; public get by exact chunk ID, admin-only create/delete."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminAccount" },
+      "description": "Admin role registry readable only by the matching user or bootstrapped admin."
+    }
+  }
+}

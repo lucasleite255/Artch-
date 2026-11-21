@@ -1,0 +1,514 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny everything unless explicitly matched below
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() &&
+        request.auth.token.email is string && (
+          request.auth.token.email.lower() == 'lucasleite255@gmail.com' ||
+          request.auth.token.email.lower() == 'artchesul@gmail.com'
+        );
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 2 && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUid(uid) {
+      return uid is string && uid.size() >= 1 && uid.size() <= 128 && uid.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidMediaUrl(url) {
+      return url is string && url.size() >= 1 && url.size() <= 1000 && url.matches('^(/assets/|/uploads/|https://).+$');
+    }
+
+    function isValidNavLink(url) {
+      return url is string && url.size() >= 1 && url.size() <= 1000 && url.matches('^(/|https://).*$');
+    }
+
+    function isValidProduct(data, productId) {
+      return data.keys().hasAll([
+        'id',
+        'name',
+        'brand',
+        'categories',
+        'images',
+        'cover',
+        'variants',
+        'catalogSource',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'createdBy'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'name',
+        'brand',
+        'categories',
+        'images',
+        'cover',
+        'videoUrl',
+        'coverType',
+        'featuredOnHome',
+        'featuredOrder',
+        'variants',
+        'catalogSource',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'createdBy'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == productId &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 140 &&
+      data.brand is string && data.brand.size() >= 0 && data.brand.size() <= 80 &&
+      data.categories is list && data.categories.size() >= 1 && data.categories.size() <= 8 &&
+      data.categories[0] is string && data.categories[0].size() >= 1 && data.categories[0].size() <= 64 &&
+      data.images is list && data.images.size() >= 1 && data.images.size() <= 6 &&
+      isValidMediaUrl(data.images[0]) &&
+      isValidMediaUrl(data.cover) &&
+      (!('videoUrl' in data) || (data.videoUrl is string && data.videoUrl.size() <= 1000 && (data.videoUrl == '' || isValidMediaUrl(data.videoUrl)))) &&
+      (!('coverType' in data) || (data.coverType is string && data.coverType in ['image', 'video'])) &&
+      (!('coverType' in data) || data.coverType != 'video' || ('videoUrl' in data && isValidMediaUrl(data.videoUrl))) &&
+      (!('featuredOnHome' in data) || data.featuredOnHome is bool) &&
+      (!('featuredOrder' in data) || (data.featuredOrder is int && data.featuredOrder >= 0 && data.featuredOrder <= 1000)) &&
+      data.variants is list && data.variants.size() >= 1 && data.variants.size() <= 12 &&
+      data.variants[0] is string && data.variants[0].size() >= 1 && data.variants[0].size() <= 120 &&
+      data.catalogSource is string && data.catalogSource.size() >= 1 && data.catalogSource.size() <= 64 &&
+      data.status == 'active' &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      isValidUid(data.createdBy);
+    }
+
+    function isValidRemovedProduct(data, productId) {
+      return data.keys().hasAll(['id', 'name', 'status', 'removedAt', 'removedBy']) &&
+        data.keys().hasOnly(['id', 'name', 'status', 'removedAt', 'removedBy']) &&
+        isValidId(data.id) &&
+        data.id == productId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 140 &&
+        data.status in ['removed', 'purged'] &&
+        data.removedAt is timestamp &&
+        isValidUid(data.removedBy);
+    }
+
+    function isValidCategory(data, categoryId) {
+      return data.keys().hasAll([
+        'id',
+        'slug',
+        'name',
+        'description',
+        'tag',
+        'coverImage',
+        'showOnHome',
+        'sortOrder',
+        'isBuiltIn',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'createdBy'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'slug',
+        'name',
+        'description',
+        'tag',
+        'coverImage',
+        'showOnHome',
+        'sortOrder',
+        'isBuiltIn',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'createdBy'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == categoryId &&
+      data.slug == categoryId &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 60 &&
+      data.description is string && data.description.size() >= 0 && data.description.size() <= 240 &&
+      data.tag is string && data.tag.size() >= 3 && data.tag.size() <= 64 &&
+      data.coverImage is string && data.coverImage.size() <= 1000 && (data.coverImage == '' || isValidMediaUrl(data.coverImage)) &&
+      data.showOnHome is bool &&
+      data.sortOrder is int && data.sortOrder >= 0 && data.sortOrder <= 1000 &&
+      data.isBuiltIn is bool &&
+      data.status == 'active' &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      isValidUid(data.createdBy);
+    }
+
+    function isValidHeroSlide(data, slideId) {
+      return data.keys().hasAll([
+        'id',
+        'title',
+        'description',
+        'ctaLabel',
+        'ctaPath',
+        'mediaType',
+        'imageUrl',
+        'videoUrl',
+        'visible',
+        'sortOrder',
+        'isBuiltIn',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'createdBy'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'title',
+        'description',
+        'ctaLabel',
+        'ctaPath',
+        'mediaType',
+        'imageUrl',
+        'videoUrl',
+        'visible',
+        'sortOrder',
+        'isBuiltIn',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'createdBy'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == slideId &&
+      data.title is string && data.title.size() >= 2 && data.title.size() <= 100 &&
+      data.description is string && data.description.size() >= 0 && data.description.size() <= 240 &&
+      data.ctaLabel is string && data.ctaLabel.size() >= 1 && data.ctaLabel.size() <= 60 &&
+      isValidNavLink(data.ctaPath) &&
+      data.mediaType is string && data.mediaType in ['image', 'video'] &&
+      data.imageUrl is string && data.imageUrl.size() <= 1000 && (data.imageUrl == '' || isValidMediaUrl(data.imageUrl)) &&
+      data.videoUrl is string && data.videoUrl.size() <= 1000 && (data.videoUrl == '' || isValidMediaUrl(data.videoUrl)) &&
+      ((data.mediaType == 'image' && isValidMediaUrl(data.imageUrl)) || (data.mediaType == 'video' && isValidMediaUrl(data.videoUrl))) &&
+      data.visible is bool &&
+      data.sortOrder is int && data.sortOrder >= 0 && data.sortOrder <= 1000 &&
+      data.isBuiltIn is bool &&
+      data.status == 'active' &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      isValidUid(data.createdBy);
+    }
+
+    function isValidAdminAccount(data, uid) {
+      return data.keys().hasAll(['uid', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'role', 'createdAt']) &&
+        isValidUid(data.uid) &&
+        data.uid == uid &&
+        data.role == 'admin' &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidMediaAsset(data, mediaId) {
+      return data.keys().hasAll([
+        'id',
+        'filename',
+        'mimeType',
+        'dataBase64',
+        'size',
+        'status',
+        'createdAt',
+        'createdBy'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'filename',
+        'mimeType',
+        'mediaType',
+        'dataBase64',
+        'chunkCount',
+        'size',
+        'status',
+        'createdAt',
+        'createdBy'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == mediaId &&
+      data.filename is string &&
+      data.filename.size() >= 5 &&
+      data.filename.size() <= 96 &&
+      data.filename.matches('^[a-zA-Z0-9_\\-]+\\.(jpg|jpeg|png|webp|avif|mp4|webm|mov)$') &&
+      (!('mediaType' in data) || (data.mediaType is string && data.mediaType in ['image', 'video'])) &&
+      (!('chunkCount' in data) || (data.chunkCount is int && data.chunkCount >= 0 && data.chunkCount <= 60)) &&
+      data.mimeType is string &&
+      data.dataBase64 is string &&
+      data.size is int &&
+      (
+        (
+          data.mimeType in ['image/jpeg', 'image/png', 'image/webp', 'image/avif'] &&
+          data.dataBase64.size() >= 16 &&
+          data.dataBase64.size() <= 920000 &&
+          data.size >= 1 &&
+          data.size <= 680000 &&
+          (!('chunkCount' in data) || data.chunkCount == 0)
+        ) || (
+          data.mimeType in ['video/mp4', 'video/webm', 'video/quicktime'] &&
+          data.dataBase64 == '' &&
+          'chunkCount' in data &&
+          data.chunkCount >= 1 &&
+          data.chunkCount <= 60 &&
+          data.size >= 1 &&
+          data.size <= 26214400
+        )
+      ) &&
+      data.status == 'active' &&
+      data.createdAt is timestamp &&
+      isValidUid(data.createdBy);
+    }
+
+    function isValidMediaChunk(data, mediaId, chunkId) {
+      return data.keys().hasAll([
+        'id',
+        'mediaId',
+        'index',
+        'dataBase64',
+        'status',
+        'createdAt',
+        'createdBy'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'mediaId',
+        'index',
+        'dataBase64',
+        'status',
+        'createdAt',
+        'createdBy'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == chunkId &&
+      isValidId(data.mediaId) &&
+      data.mediaId == mediaId &&
+      data.index is int &&
+      data.index >= 0 &&
+      data.index < 60 &&
+      data.dataBase64 is string &&
+      data.dataBase64.size() >= 4 &&
+      data.dataBase64.size() <= 760000 &&
+      data.status == 'active' &&
+      data.createdAt is timestamp &&
+      isValidUid(data.createdBy);
+    }
+
+    // Storefront products: public non-PII read (requires status == 'active' query); admin-only validated write
+    match /products/{productId} {
+      allow get: if isValidId(productId) && resource.data.status == 'active';
+      allow list: if resource.data.status == 'active';
+
+      allow create: if isVerifiedUser() &&
+        isValidId(productId) &&
+        isValidProduct(incoming(), productId) &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isVerifiedUser() &&
+        isValidId(productId) &&
+        isValidProduct(incoming(), productId) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'brand',
+          'categories',
+          'images',
+          'cover',
+          'videoUrl',
+          'coverType',
+          'featuredOnHome',
+          'featuredOrder',
+          'variants',
+          'updatedAt'
+        ]) &&
+        incoming().id == existing().id &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().catalogSource == existing().catalogSource &&
+        incoming().status == existing().status &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow delete: if isVerifiedUser() && isValidId(productId) && isAdmin();
+    }
+
+    // Removal tombstones for built-in catalog items: public non-PII read; admin-only write
+    match /removedProducts/{productId} {
+      allow get: if isValidId(productId) && resource.data.status in ['removed', 'purged'];
+      allow list: if resource.data.status in ['removed', 'purged'];
+
+      allow create: if isVerifiedUser() &&
+        isValidId(productId) &&
+        isValidRemovedProduct(incoming(), productId) &&
+        incoming().status == 'removed' &&
+        incoming().removedBy == request.auth.uid &&
+        incoming().removedAt == request.time &&
+        isAdmin();
+
+      allow update: if isVerifiedUser() &&
+        isValidId(productId) &&
+        isValidRemovedProduct(incoming(), productId) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'removedAt', 'removedBy']) &&
+        incoming().id == existing().id &&
+        incoming().name == existing().name &&
+        existing().status == 'removed' &&
+        incoming().status == 'purged' &&
+        incoming().removedBy == request.auth.uid &&
+        incoming().removedAt == request.time &&
+        isAdmin();
+
+      allow delete: if isVerifiedUser() && isValidId(productId) && isAdmin();
+    }
+
+    // Storefront categories and Home highlight cover photos: public non-PII read; admin-only write
+    match /categories/{categoryId} {
+      allow get: if isValidId(categoryId) && resource.data.status == 'active';
+      allow list: if resource.data.status == 'active';
+
+      allow create: if isVerifiedUser() &&
+        isValidId(categoryId) &&
+        isValidCategory(incoming(), categoryId) &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isVerifiedUser() &&
+        isValidId(categoryId) &&
+        isValidCategory(incoming(), categoryId) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'description',
+          'tag',
+          'coverImage',
+          'showOnHome',
+          'sortOrder',
+          'updatedAt'
+        ]) &&
+        incoming().id == existing().id &&
+        incoming().slug == existing().slug &&
+        incoming().isBuiltIn == existing().isBuiltIn &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().status == existing().status &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow delete: if isVerifiedUser() && isValidId(categoryId) && isAdmin();
+    }
+
+    // Storefront home hero slides: public non-PII read; admin-only write
+    match /heroSlides/{slideId} {
+      allow get: if isValidId(slideId) && resource.data.status == 'active';
+      allow list: if resource.data.status == 'active';
+
+      allow create: if isVerifiedUser() &&
+        isValidId(slideId) &&
+        isValidHeroSlide(incoming(), slideId) &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isVerifiedUser() &&
+        isValidId(slideId) &&
+        isValidHeroSlide(incoming(), slideId) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title',
+          'description',
+          'ctaLabel',
+          'ctaPath',
+          'mediaType',
+          'imageUrl',
+          'videoUrl',
+          'visible',
+          'sortOrder',
+          'updatedAt'
+        ]) &&
+        incoming().id == existing().id &&
+        incoming().isBuiltIn == existing().isBuiltIn &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().status == existing().status &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow delete: if isVerifiedUser() && isValidId(slideId) && isAdmin();
+    }
+
+    // Durable storefront media blobs (images + chunked video manifests): public get by ID; admin-only list/create/delete
+    match /mediaAssets/{mediaId} {
+      allow get: if isValidId(mediaId) && resource.data.status == 'active';
+      allow list: if isVerifiedUser() && resource.data.status == 'active' && isAdmin();
+
+      allow create: if isVerifiedUser() &&
+        isValidId(mediaId) &&
+        isValidMediaAsset(incoming(), mediaId) &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+
+      allow update: if false;
+
+      allow delete: if isVerifiedUser() && isValidId(mediaId) && isAdmin();
+
+      match /chunks/{chunkId} {
+        allow get: if isValidId(mediaId) && isValidId(chunkId) && resource.data.status == 'active';
+        allow list: if false;
+
+        allow create: if isVerifiedUser() &&
+          isValidId(mediaId) &&
+          isValidId(chunkId) &&
+          isValidMediaChunk(incoming(), mediaId, chunkId) &&
+          incoming().createdBy == request.auth.uid &&
+          incoming().createdAt == request.time &&
+          isAdmin();
+
+        allow update: if false;
+
+        allow delete: if isVerifiedUser() && isValidId(mediaId) && isValidId(chunkId) && isAdmin();
+      }
+    }
+
+    // Admin registry: private to owner or bootstrapped admin; only bootstrapped admin can grant/revoke
+    match /admins/{uid} {
+      allow get: if isVerifiedUser() && isValidUid(uid) && (request.auth.uid == uid || isBootstrappedAdmin());
+      allow create: if isBootstrappedAdmin() &&
+        isValidUid(uid) &&
+        isValidAdminAccount(incoming(), uid) &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isBootstrappedAdmin() && isValidUid(uid);
+    }
+  }
+}

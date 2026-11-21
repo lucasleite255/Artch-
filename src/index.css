@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #152f40;
+  --muted: #566773;
+  --ice: #d0e5f2;
+  --blue: #9cc1d9;
+  --olive: #595334;
+  --line: #dce2e5;
+  --paper: #f5f6f5;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 24px;
+  }
+
+  body {
+    margin: 0;
+    color: var(--ink);
+    background-color: #ffffff;
+    font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2 {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 500;
+    line-height: 1.06;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--ice);
+    color: var(--ink);
+  }
+}
+
+.font-serif-display {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+
+.font-sans-body {
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Artchê",
+  "description": "Encontre roupas e acessórios para o frio na Artchê. Explore o catálogo e consulte nossa equipe pelo WhatsApp. Brasília, Asa Sul.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
